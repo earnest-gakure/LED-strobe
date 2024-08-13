@@ -1,72 +1,87 @@
-//strobing 2 LEDs in a pattern 
-
-
-int led1 = 12;
-int led2 = 11; // Define the pin for the second LED
+//2 LED strobe
+int led1 = 11;
+int led2 = 12;
 long timer = 0;
-long led2Timer = 0;
 int state = LOW;
-int led2State = LOW;
-int blinkCount = 0;
-int led2BlinkCount = 0;
-bool inLongDelay = false;
-const long shortInterval = 400000; // Adjust this value for short strobe interval and long delay
-const long blinkInterval = shortInterval / 8; // Interval for each blink within the short interval
-
+const long Interval = 200000;      // Overall duration for on/off
+const long strobeInterval = 10000; // Duration for each strobe (half on, half off)
+int strobeCount = 0;               // Counter for the number of strobes
+int maxStrobe = 3;
 void setup() {
   pinMode(led1, OUTPUT);
-  pinMode(led2, OUTPUT); // Set the second LED pin as output
-  Serial.begin(9600); // Initialize serial communication
+  pinMode(led2, OUTPUT);
+  Serial.begin(9600);  // Initialize serial communication
 }
 
 void loop() {
-  // Increment both timers to keep them in sync
-  timer++;
-  led2Timer++;
+  while (1) {
+    timer++;
+    timerON();
+    timerOFF();
+  }
+}
 
-  if (!inLongDelay) {
-    if (timer >= blinkInterval) {
-      state = !state; // Toggle the state
-      digitalWrite(led1, state); // Update the first LED state
+void timerON() {
+  if (state == LOW && timer >= Interval) {
+    strobe();  // Call the strobe function for led1
+    state = HIGH;
+    timer = 0;  // Reset the timer after strobing
+  }
+}
 
-      if (state == HIGH) {
-        Serial.println("LED1 ON");
-        blinkCount++;
-      } else {
-        Serial.println("LED1 OFF");
-      }
+void timerOFF() {
+  if (state == HIGH && timer >= Interval) {
+    digitalWrite(led1, LOW);
+    Serial.println("LED1 OFF");
+    strobe2();  // Call the strobe function for led2
+    state = LOW;
+    timer = 0;  // Reset the timer after turning the LED off
+    strobeCount = 0;  // Reset the strobe counter
+  }
+}
 
-      timer = 0; // Reset the timer
+void strobe() {
+  long strobeTimer = 0;
+  strobeCount = 0;
 
-      if (blinkCount >= 4) {
-        inLongDelay = true;
-        blinkCount = 0;
-        state = LOW; // Ensure LED1 is off during the long delay
-        digitalWrite(led1, state);
-        Serial.println("Entering long delay...");
-      }
+  while (strobeCount <= maxStrobe) {  // Strobe only 3 times
+    if (strobeTimer % (2 * strobeInterval) < strobeInterval) {
+      digitalWrite(led1, HIGH);  // Turn the LED on during the first half of the strobeInterval
+    } else {
+      digitalWrite(led1, LOW);   // Turn the LED off during the second half of the strobeInterval
     }
-  } else {
-    if (led2Timer >= blinkInterval) {
-      led2State = !led2State; // Toggle the state for LED2
-      digitalWrite(led2, led2State); // Update the second LED state
 
-      if (led2State == HIGH) {
-        Serial.println("LED2 ON");
-        led2BlinkCount++;
-      } else {
-        Serial.println("LED2 OFF");
-      }
+    strobeTimer++;  // Increment the strobe timer
 
-      led2Timer = 0; // Reset the timer for LED2
-
-      if (led2BlinkCount >= 4) {
-        inLongDelay = false;
-        led2BlinkCount = 0;
-        led2State = LOW; // Ensure LED2 is off when returning to LED1 strobe
-        digitalWrite(led2, led2State);
-        Serial.println("Exiting long delay...");
-      }
+    // Check if a full strobe cycle (on + off) has completed
+    if (strobeTimer >= 2 * strobeInterval) {
+      strobeTimer = 0;  // Reset the strobe timer for the next cycle
+      strobeCount++;    // Increment the strobe count
     }
   }
+
+  Serial.println("LED1 Strobe complete");
+}
+
+void strobe2() {
+  long strobeTimer = 0;
+  strobeCount = 0;
+
+  while (strobeCount <= maxStrobe) {  // Strobe only 3 times
+    if (strobeTimer % (2 * strobeInterval) < strobeInterval) {
+      digitalWrite(led2, HIGH);  // Turn LED2 on during the first half of the strobeInterval
+    } else {
+      digitalWrite(led2, LOW);   // Turn LED2 off during the second half of the strobeInterval
+    }
+
+    strobeTimer++;  // Increment the strobe timer
+
+    // Check if a full strobe cycle (on + off) has completed
+    if (strobeTimer >= 2 * strobeInterval) {
+      strobeTimer = 0;  // Reset the strobe timer for the next cycle
+      strobeCount++;    // Increment the strobe count
+    }
+  }
+
+  Serial.println("LED2 Strobe complete");
 }
